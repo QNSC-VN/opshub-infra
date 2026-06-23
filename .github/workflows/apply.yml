@@ -1,0 +1,97 @@
+# =============================================================================
+# OpenTofu Apply — applies after merge to main.
+# Shared → develop → prod (prod requires GitHub Environment approval).
+# =============================================================================
+name: OpenTofu Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "live/**"
+      - "modules/**"
+      - ".github/workflows/apply.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TOFU_VERSION: "1.9.1"
+  AWS_REGION: ap-southeast-1
+
+jobs:
+  apply-shared:
+    runs-on: ubuntu-latest
+    environment: shared
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with: { tofu_version: "${{ env.TOFU_VERSION }}" }
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/opshub-github-infra-apply
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: tofu init
+        working-directory: live/_shared
+        run: tofu init -input=false
+
+      - name: tofu apply
+        working-directory: live/_shared
+        run: tofu apply -input=false -auto-approve
+
+  apply-develop:
+    needs: apply-shared
+    runs-on: ubuntu-latest
+    environment: develop
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with: { tofu_version: "${{ env.TOFU_VERSION }}" }
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/opshub-github-infra-apply
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: tofu init
+        working-directory: live/develop
+        run: tofu init -input=false
+
+      - name: tofu apply
+        working-directory: live/develop
+        run: tofu apply -input=false -auto-approve
+        env:
+          TF_VAR_acm_cert_arn: ${{ secrets.ACM_CERT_ARN_DEVELOP }}
+
+  apply-prod:
+    needs: apply-develop
+    runs-on: ubuntu-latest
+    environment: production   # requires manual approval in GitHub Settings
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with: { tofu_version: "${{ env.TOFU_VERSION }}" }
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/opshub-github-infra-apply
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: tofu init
+        working-directory: live/prod
+        run: tofu init -input=false
+
+      - name: tofu apply
+        working-directory: live/prod
+        run: tofu apply -input=false -auto-approve
+        env:
+          TF_VAR_acm_cert_arn: ${{ secrets.ACM_CERT_ARN_PROD }}
