@@ -1,14 +1,14 @@
 # Default reviewers for all files
-*                           @nghiavan0610
+*                           @QNSC-VN
 
 # Production live environments — requires infrastructure lead review
-live/prod/                  @nghiavan0610
+live/prod/                  @QNSC-VN
 
 # Shared infra (ECR, OIDC roles) — cross-product impact
-live/_shared/               @nghiavan0610
+live/_shared/               @QNSC-VN
 
 # All modules — changes affect all environments
-modules/                    @nghiavan0610
+modules/                    @QNSC-VN
 
 # CI/CD workflows
-.github/workflows/          @nghiavan0610
+.github/workflows/          @QNSC-VN
