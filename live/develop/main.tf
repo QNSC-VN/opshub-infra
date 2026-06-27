@@ -51,12 +51,24 @@ module "network" {
   tags                 = { Environment = local.env }
 }
 
+# ── ECR repositories ──────────────────────────────────────────────────────────
+module "ecr" {
+  source       = "../../modules/ecr"
+  repositories = ["opshub-api", "opshub-worker"]
+  tags         = { Environment = local.env }
+}
+
 # ── Secrets (containers only; values set out-of-band) ─────────────────────────
 module "secrets" {
   source       = "../../modules/secrets"
   prefix       = "opshub/${local.env}"
-  secret_names = ["db-url", "jwt-secret"]
-  tags         = { Environment = local.env }
+  secret_names = [
+    "db-url",
+    "jwt-secret",
+    "entra-client-secret",  # Azure Entra app client secret (for JWKS + Graph API)
+    "valkey-url",           # ElastiCache connection string injected after apply
+  ]
+  tags = { Environment = local.env }
 }
 
 # ── RDS PostgreSQL 18 ─────────────────────────────────────────────────────────
@@ -80,6 +92,58 @@ module "messaging" {
   source = "../../modules/messaging"
   prefix = local.name
   tags   = { Environment = local.env }
+}
+
+# ── S3 upload bucket (leave docs, profile photos, attachments) ────────────────
+resource "aws_s3_bucket" "uploads" {
+  bucket        = "opshub-${local.env}-uploads"
+  force_destroy = true
+  tags          = { Name = "opshub-${local.env}-uploads", Environment = local.env }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  rule {
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "uploads" {
+  bucket                  = aws_s3_bucket.uploads.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  rule {
+    id     = "expire-unconfirmed-uploads"
+    status = "Enabled"
+    filter { prefix = "tmp/" }
+    expiration { days = 1 }
+  }
+}
+
+# ── ElastiCache Serverless (Valkey) — rate limiting + authz cache ─────────────
+resource "aws_elasticache_serverless_cache" "valkey" {
+  engine = "valkey"
+  name   = "${local.name}-valkey"
+
+  cache_usage_limits {
+    data_storage {
+      maximum = 1
+      unit    = "GB"
+    }
+    ecpu_per_second {
+      maximum = 1000
+    }
+  }
+
+  subnet_ids         = module.network.data_subnet_ids
+  security_group_ids = [module.network.sg_elasticache_id]
+  tags               = { Name = "${local.name}-valkey", Environment = local.env }
 }
 
 # ── ALB ───────────────────────────────────────────────────────────────────────
@@ -163,18 +227,22 @@ module "api" {
 
   secret_arns = values(module.secrets.secret_arns)
   secrets = [
-    { name = "DATABASE_URL", secret_arn = module.secrets.secret_arns["db-url"] },
-    { name = "JWT_SECRET", secret_arn = module.secrets.secret_arns["jwt-secret"] },
+    { name = "DATABASE_URL",        secret_arn = module.secrets.secret_arns["db-url"] },
+    { name = "JWT_SECRET",          secret_arn = module.secrets.secret_arns["jwt-secret"] },
+    { name = "ENTRA_CLIENT_SECRET", secret_arn = module.secrets.secret_arns["entra-client-secret"] },
+    { name = "VALKEY_URL",          secret_arn = module.secrets.secret_arns["valkey-url"] },
   ]
   environment_vars = [
-    { name = "NODE_ENV", value = "production" },
-    { name = "PORT", value = "3000" },
-    { name = "AWS_REGION", value = local.region },
-    { name = "SQS_OUTBOX_URL", value = module.messaging.outbox_queue_url },
+    { name = "NODE_ENV",          value = "production" },
+    { name = "PORT",              value = "3000" },
+    { name = "AWS_REGION",        value = local.region },
+    { name = "SQS_OUTBOX_URL",    value = module.messaging.outbox_queue_url },
+    { name = "S3_UPLOAD_BUCKET",  value = aws_s3_bucket.uploads.id },
   ]
 
   sqs_queue_arns = values(module.messaging.queue_arns)
   sns_topic_arns = values(module.messaging.topic_arns)
+  s3_bucket_arns = [aws_s3_bucket.uploads.arn]
   tags           = { Environment = local.env, Service = "api" }
 }
 
@@ -203,17 +271,21 @@ module "worker" {
 
   secret_arns = values(module.secrets.secret_arns)
   secrets = [
-    { name = "DATABASE_URL", secret_arn = module.secrets.secret_arns["db-url"] },
-    { name = "JWT_SECRET", secret_arn = module.secrets.secret_arns["jwt-secret"] },
+    { name = "DATABASE_URL",        secret_arn = module.secrets.secret_arns["db-url"] },
+    { name = "JWT_SECRET",          secret_arn = module.secrets.secret_arns["jwt-secret"] },
+    { name = "ENTRA_CLIENT_SECRET", secret_arn = module.secrets.secret_arns["entra-client-secret"] },
+    { name = "VALKEY_URL",          secret_arn = module.secrets.secret_arns["valkey-url"] },
   ]
   environment_vars = [
-    { name = "NODE_ENV", value = "production" },
-    { name = "AWS_REGION", value = local.region },
-    { name = "SQS_OUTBOX_URL", value = module.messaging.outbox_queue_url },
+    { name = "NODE_ENV",         value = "production" },
+    { name = "AWS_REGION",       value = local.region },
+    { name = "SQS_OUTBOX_URL",   value = module.messaging.outbox_queue_url },
+    { name = "S3_UPLOAD_BUCKET", value = aws_s3_bucket.uploads.id },
   ]
 
   sqs_queue_arns = values(module.messaging.queue_arns)
   sns_topic_arns = values(module.messaging.topic_arns)
+  s3_bucket_arns = [aws_s3_bucket.uploads.arn]
   tags           = { Environment = local.env, Service = "worker" }
 }
 

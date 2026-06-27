@@ -5,3 +5,4 @@ output "data_subnet_ids" { value = aws_subnet.data[*].id }
 output "sg_alb_id" { value = aws_security_group.alb.id }
 output "sg_app_id" { value = aws_security_group.app.id }
 output "sg_rds_id" { value = aws_security_group.rds.id }
+output "sg_elasticache_id" { value = aws_security_group.elasticache.id }

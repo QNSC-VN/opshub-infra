@@ -82,6 +82,25 @@ resource "aws_iam_role_policy" "task_messaging" {
   policy = data.aws_iam_policy_document.task_messaging[0].json
 }
 
+data "aws_iam_policy_document" "task_s3" {
+  count = length(var.s3_bucket_arns) > 0 ? 1 : 0
+  statement {
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    resources = [for arn in var.s3_bucket_arns : "${arn}/*"]
+  }
+  statement {
+    actions   = ["s3:ListBucket"]
+    resources = var.s3_bucket_arns
+  }
+}
+
+resource "aws_iam_role_policy" "task_s3" {
+  count  = length(var.s3_bucket_arns) > 0 ? 1 : 0
+  name   = "s3-access"
+  role   = aws_iam_role.task.id
+  policy = data.aws_iam_policy_document.task_s3[0].json
+}
+
 # ── Task definition ───────────────────────────────────────────────────────────
 resource "aws_ecs_task_definition" "this" {
   family                   = local.full_name

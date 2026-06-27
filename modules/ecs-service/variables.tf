@@ -83,6 +83,11 @@ variable "sns_topic_arns" {
   type    = list(string)
   default = []
 }
+variable "s3_bucket_arns" {
+  type        = list(string)
+  default     = []
+  description = "S3 bucket ARNs the task role can read/write (e.g. file upload bucket)."
+}
 
 variable "tags" {
   type    = map(string)
