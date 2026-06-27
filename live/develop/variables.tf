@@ -13,8 +13,3 @@ variable "image_tag" {
   default     = "latest"
   description = "Container image tag to deploy for api & worker."
 }
-
-variable "ecr_account_id" {
-  type        = string
-  description = "AWS account id hosting the shared ECR repositories."
-}

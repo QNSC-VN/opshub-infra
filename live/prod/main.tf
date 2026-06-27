@@ -24,15 +24,29 @@ provider "aws" {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
+# ── Read shared layer outputs (OIDC ARN, KMS ARN, artifacts bucket) ───────────
+data "terraform_remote_state" "shared" {
+  backend = "s3"
+  config = {
+    bucket = "qncs-tofu-state"
+    key    = "opshub/shared/terraform.tfstate"
+    region = "ap-southeast-1"
+  }
+}
+
 locals {
   env    = "prod"
   name   = "opshub-prod"
   region = "ap-southeast-1"
   azs    = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
 
-  ecr_registry   = "${var.ecr_account_id}.dkr.ecr.${local.region}.amazonaws.com"
-  ecr_api_url    = "${local.ecr_registry}/opshub-api:${var.image_tag}"
-  ecr_worker_url = "${local.ecr_registry}/opshub-worker:${var.image_tag}"
+  kms_key_arn = data.terraform_remote_state.shared.outputs.kms_key_arn
+
+  ecr_base       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${local.region}.amazonaws.com"
+  ecr_api_url    = "${local.ecr_base}/opshub-api:${var.image_tag}"
+  ecr_worker_url = "${local.ecr_base}/opshub-worker:${var.image_tag}"
 }
 
 # ── Networking (HA NAT) ───────────────────────────────────────────────────────
@@ -48,12 +62,14 @@ module "network" {
   data_subnet_cidrs    = ["10.30.20.0/24", "10.30.21.0/24", "10.30.22.0/24"]
   multi_az_nat         = true
   app_port             = 3000
+  enable_flow_logs     = true
   tags                 = { Environment = local.env }
 }
 
 module "secrets" {
   source       = "../../modules/secrets"
   prefix       = "opshub/${local.env}"
+  kms_key_arn  = local.kms_key_arn
   secret_names = [
     "db-url",
     "jwt-secret",
@@ -78,7 +94,11 @@ resource "aws_s3_bucket_versioning" "uploads" {
 resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
   bucket = aws_s3_bucket.uploads.id
   rule {
-    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = local.kms_key_arn
+    }
+    bucket_key_enabled = true   # reduces KMS request costs by ~99%
   }
 }
 
@@ -138,6 +158,7 @@ module "rds" {
   identifier               = local.name
   subnet_ids               = module.network.data_subnet_ids
   security_group_id        = module.network.sg_rds_id
+  kms_key_arn              = local.kms_key_arn
   instance_class           = "db.r7g.large"
   allocated_storage_gb     = 100
   max_allocated_storage_gb = 500
