@@ -56,7 +56,7 @@ data "aws_iam_policy_document" "deploy" {
   statement {
     sid       = "PassRole"
     actions   = ["iam:PassRole"]
-    resources = ["*"]
+    resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*"]
     condition {
       test     = "StringEquals"
       variable = "iam:PassedToService"

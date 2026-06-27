@@ -54,7 +54,7 @@ module "network" {
 # ── ECR repositories ──────────────────────────────────────────────────────────
 module "ecr" {
   source       = "../../modules/ecr"
-  repositories = ["opshub-api", "opshub-worker"]
+  repositories = ["opshub-api", "opshub-worker", "opshub-migrator"]
   tags         = { Environment = local.env }
 }
 
@@ -116,6 +116,11 @@ resource "aws_s3_bucket_public_access_block" "uploads" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_versioning" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  versioning_configuration { status = "Enabled" }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
   bucket = aws_s3_bucket.uploads.id
   rule {
@@ -123,6 +128,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
     status = "Enabled"
     filter { prefix = "tmp/" }
     expiration { days = 1 }
+  }
+}
+
+resource "aws_s3_bucket_cors_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  cors_rule {
+    allowed_headers = ["Content-Type", "Content-Length", "Content-MD5"]
+    allowed_methods = ["PUT"]
+    allowed_origins = ["http://localhost:5174", "https://app-dev.opshub.qncs.io"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3600
   }
 }
 
