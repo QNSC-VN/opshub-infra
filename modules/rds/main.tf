@@ -32,5 +32,9 @@ resource "aws_db_instance" "this" {
   auto_minor_version_upgrade = true
   apply_immediately          = false
 
+  # Performance Insights — free 7-day retention. Surfaces slow queries / waits.
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 7
+
   tags = merge(var.tags, { Name = var.identifier })
 }
