@@ -4,7 +4,7 @@
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Please report: **security@opshub.io**
+Please report: **security@qnsc.vn**
 
 You will receive acknowledgement within **48 hours** and a status update within **7 days**.
 
