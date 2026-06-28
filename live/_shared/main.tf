@@ -41,9 +41,11 @@ data "terraform_remote_state" "platform" {
 
 # ── Container registries ──────────────────────────────────────────────────────
 module "ecr" {
-  source       = "../../modules/ecr"
-  repositories = ["opshub-api", "opshub-worker"]
-  tags         = { Scope = "shared" }
+  source               = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/ecr?ref=ecr-v1.0.0"
+  repository_names     = ["opshub-api", "opshub-worker"]
+  keep_tagged_count    = 20
+  untagged_expire_days = 7
+  tags                 = { Scope = "shared" }
 }
 
 # ── GitHub OIDC deploy roles — opshub-web (S3 + CloudFront) ──────────────────

@@ -68,9 +68,11 @@ module "network" {
 
 # ── ECR repositories ──────────────────────────────────────────────────────────
 module "ecr" {
-  source       = "../../modules/ecr"
-  repositories = ["opshub-api", "opshub-worker", "opshub-migrator"]
-  tags         = { Environment = local.env }
+  source               = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/ecr?ref=ecr-v1.0.0"
+  repository_names     = ["opshub-api", "opshub-worker", "opshub-migrator"]
+  keep_tagged_count    = 20
+  untagged_expire_days = 7
+  tags                 = { Environment = local.env }
 }
 
 # ── Secrets (containers only; values set out-of-band) ─────────────────────────
