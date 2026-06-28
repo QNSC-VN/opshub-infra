@@ -333,7 +333,7 @@ module "waf" {
 
 # ── CDN (S3 + CloudFront) — opshub-web SPA ────────────────────────────────────
 module "cdn" {
-  source       = "../../modules/cdn"
+  source       = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/cdn?ref=cdn-v1.0.0"
   name         = "opshub-web-prod"
   acm_cert_arn = var.web_acm_cert_arn
   aliases      = []   # set to ["app.opshub.qnsc.io"] once DNS is configured
