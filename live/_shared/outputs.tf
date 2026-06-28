@@ -1,6 +1,9 @@
-output "ecr_repository_urls"    { value = module.ecr.repository_urls }
-output "deploy_role_arn"         { value = module.iam_oidc.deploy_role_arn }
-output "web_deploy_role_arns"    { value = { for k, v in aws_iam_role.web_deploy : k => v.arn } }
+output "ecr_repository_urls"  { value = module.ecr.repository_urls }
+output "deploy_role_arns"     { value = module.iam_oidc.deploy_role_arns }
+output "ecr_push_role_arn"    { value = module.iam_oidc.ecr_push_role_arn }
+output "infra_plan_role_arn"  { value = module.iam_oidc.infra_plan_role_arn }
+output "infra_apply_role_arn" { value = module.iam_oidc.infra_apply_role_arn }
+output "web_deploy_role_arns" { value = { for k, v in aws_iam_role.web_deploy : k => v.arn } }
 
 # ── Re-exported from qnsc-infra platform layer ────────────────────────────────
 # Env stacks read from this shared state instead of going directly to qnsc-infra.

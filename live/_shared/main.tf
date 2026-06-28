@@ -125,11 +125,32 @@ resource "aws_iam_role_policy" "web_deploy" {
   })
 }
 
-# ── GitHub Actions OIDC deploy role (ECS/ECR) ─────────────────────────────────
+# ── GitHub Actions OIDC roles (deploy per-env, ecr-push, infra plan/apply) ────
 module "iam_oidc" {
-  source            = "../../modules/iam-oidc"
+  source            = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/iam-oidc?ref=iam-oidc-v1.0.0"
+  product           = "opshub"
   github_org        = var.github_org
   oidc_provider_arn = data.terraform_remote_state.platform.outputs.oidc_provider_arn
-  ecr_arns          = ["*"]
-  tags              = { Scope = "shared" }
+
+  environments = {
+    develop = {
+      allowed_subjects = [
+        "repo:${var.github_org}/opshub-api:ref:refs/heads/main",
+        "repo:${var.github_org}/opshub-api:environment:develop",
+      ]
+    }
+    production = {
+      allowed_subjects = [
+        "repo:${var.github_org}/opshub-api:ref:refs/heads/main",
+        "repo:${var.github_org}/opshub-api:ref:refs/tags/v*",
+        "repo:${var.github_org}/opshub-api:environment:production",
+      ]
+    }
+  }
+
+  app_repo_names         = ["opshub-api"]
+  infra_repo_name        = "opshub-infra"
+  ecr_repository_pattern = "opshub-*"
+  ecs_passrole_pattern   = "opshub-*"
+  tags                   = { Scope = "shared" }
 }
