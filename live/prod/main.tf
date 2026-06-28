@@ -51,7 +51,7 @@ locals {
 
 # ── Networking (HA NAT) ───────────────────────────────────────────────────────
 module "network" {
-  source = "../../modules/network"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/network?ref=network-v1.0.0"
 
   name                 = local.name
   region               = local.region
@@ -149,7 +149,7 @@ resource "aws_elasticache_serverless_cache" "valkey" {
   }
 
   subnet_ids         = module.network.data_subnet_ids
-  security_group_ids = [module.network.sg_elasticache_id]
+  security_group_ids = [module.network.sg_cache_id]
   tags               = { Name = "${local.name}-valkey", Environment = local.env }
 }
 

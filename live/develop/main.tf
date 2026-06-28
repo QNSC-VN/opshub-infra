@@ -51,12 +51,13 @@ locals {
 
 # ── Networking ────────────────────────────────────────────────────────────────
 module "network" {
-  source = "../../modules/network"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/network?ref=network-v1.0.0"
 
-  name                 = local.name
-  region               = local.region
-  azs                  = local.azs
-  vpc_cidr             = "10.20.0.0/16"
+  name                       = local.name
+  region                     = local.region
+  azs                        = local.azs
+  enable_interface_endpoints = false # dev: NAT already covers egress — save ~$22/mo
+  vpc_cidr                   = "10.20.0.0/16"
   public_subnet_cidrs  = ["10.20.0.0/24", "10.20.1.0/24", "10.20.2.0/24"]
   private_subnet_cidrs = ["10.20.10.0/24", "10.20.11.0/24", "10.20.12.0/24"]
   data_subnet_cidrs    = ["10.20.20.0/24", "10.20.21.0/24", "10.20.22.0/24"]
@@ -190,7 +191,7 @@ resource "aws_elasticache_serverless_cache" "valkey" {
   }
 
   subnet_ids         = module.network.data_subnet_ids
-  security_group_ids = [module.network.sg_elasticache_id]
+  security_group_ids = [module.network.sg_cache_id]
   tags               = { Name = "${local.name}-valkey", Environment = local.env }
 }
 
