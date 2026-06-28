@@ -75,15 +75,17 @@ module "ecr" {
 
 # ── Secrets (containers only; values set out-of-band) ─────────────────────────
 module "secrets" {
-  source       = "../../modules/secrets"
-  prefix       = "opshub/${local.env}"
-  kms_key_arn  = local.kms_key_arn
-  secret_names = [
-    "db-url",
-    "jwt-secret",
-    "entra-client-secret",  # Azure Entra app client secret (for JWKS + Graph API)
-    "valkey-url",           # ElastiCache connection string injected after apply
-  ]
+  source      = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/secrets?ref=secrets-v1.0.0"
+  prefix      = "opshub/${local.env}"
+  kms_key_arn = local.kms_key_arn
+
+  secret_names = {
+    "db-url"              = "PostgreSQL connection URL for the app"
+    "jwt-secret"          = "JWT signing secret"
+    "entra-client-secret" = "Azure Entra app client secret (for JWKS + Graph API)"
+    "valkey-url"          = "ElastiCache connection string injected after apply"
+  }
+
   tags = { Environment = local.env }
 }
 
