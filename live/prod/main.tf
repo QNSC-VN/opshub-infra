@@ -184,6 +184,13 @@ module "messaging" {
 }
 
 # ── ALB ───────────────────────────────────────────────────────────────────────
+module "alb_logs" {
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/alb-logs?ref=alb-logs-v1.0.0"
+
+  bucket_name = "${local.name}-alb-logs"
+  tags        = { Environment = local.env }
+}
+
 resource "aws_lb" "this" {
   name                       = local.name
   internal                   = false
@@ -192,7 +199,13 @@ resource "aws_lb" "this" {
   subnets                    = module.network.public_subnet_ids
   enable_deletion_protection = true
   drop_invalid_header_fields = true
-  tags                       = { Name = local.name, Environment = local.env }
+
+  access_logs {
+    bucket  = module.alb_logs.bucket_id
+    enabled = true
+  }
+
+  tags = { Name = local.name, Environment = local.env }
 }
 
 resource "aws_lb_listener" "https" {
