@@ -5,11 +5,11 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "qncs-tofu-state"
+    bucket         = "qnsc-tofu-state"
     key            = "opshub/develop/terraform.tfstate"
     region         = "ap-southeast-1"
     encrypt        = true
-    dynamodb_table = "qncs-tofu-locks"
+    dynamodb_table = "qnsc-tofu-locks"
   }
 }
 
@@ -30,7 +30,7 @@ data "aws_caller_identity" "current" {}
 data "terraform_remote_state" "shared" {
   backend = "s3"
   config = {
-    bucket = "qncs-tofu-state"
+    bucket = "qnsc-tofu-state"
     key    = "opshub/shared/terraform.tfstate"
     region = "ap-southeast-1"
   }
@@ -157,7 +157,7 @@ resource "aws_s3_bucket_cors_configuration" "uploads" {
   cors_rule {
     allowed_headers = ["Content-Type", "Content-Length", "Content-MD5"]
     allowed_methods = ["PUT"]
-    allowed_origins = ["http://localhost:5174", "https://app-dev.opshub.qncs.io"]
+    allowed_origins = ["http://localhost:5174", "https://app-dev.opshub.qnsc.io"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3600
   }
@@ -343,7 +343,7 @@ module "cdn" {
   source       = "../../modules/cdn"
   name         = "opshub-web-develop"
   acm_cert_arn = var.web_acm_cert_arn
-  aliases      = []   # set to ["app-dev.opshub.qncs.io"] once DNS is configured
+  aliases      = []   # set to ["app-dev.opshub.qnsc.io"] once DNS is configured
   price_class  = "PriceClass_200"
   tags         = { Environment = local.env, Service = "web" }
 }

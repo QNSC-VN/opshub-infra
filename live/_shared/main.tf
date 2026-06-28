@@ -5,11 +5,11 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "qncs-tofu-state"
+    bucket         = "qnsc-tofu-state"
     key            = "opshub/shared/terraform.tfstate"
     region         = "ap-southeast-1"
     encrypt        = true
-    dynamodb_table = "qncs-tofu-locks"
+    dynamodb_table = "qnsc-tofu-locks"
   }
 }
 
@@ -29,11 +29,11 @@ variable "github_org" {
   description = "GitHub org/owner that hosts the opshub repositories."
 }
 
-# ── Platform remote state (OIDC provider ARN from qncs-infra) ──────────────
+# ── Platform remote state (OIDC provider ARN from qnsc-infra) ──────────────
 data "terraform_remote_state" "platform" {
   backend = "s3"
   config = {
-    bucket = "qncs-tofu-state"
+    bucket = "qnsc-tofu-state"
     key    = "platform/bootstrap/terraform.tfstate"
     region = "ap-southeast-1"
   }

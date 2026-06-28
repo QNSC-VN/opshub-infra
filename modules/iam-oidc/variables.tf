@@ -1,6 +1,6 @@
 variable "oidc_provider_arn" {
   type        = string
-  description = "ARN of the GitHub OIDC provider from qncs-infra bootstrap."
+  description = "ARN of the GitHub OIDC provider from qnsc-infra bootstrap."
 }
 variable "github_org" { type = string }
 variable "github_repos" {
