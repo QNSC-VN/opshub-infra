@@ -229,9 +229,14 @@ resource "aws_lb_listener" "http_redirect" {
 
 # ── ECS cluster ───────────────────────────────────────────────────────────────
 module "ecs_cluster" {
-  source = "../../modules/ecs-cluster"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/ecs-cluster?ref=ecs-cluster-v1.0.0"
   name   = local.name
   tags   = { Environment = local.env }
+
+  # Preserve opshub's prior cluster config (was inline before the shared module).
+  container_insights = "enabled"
+  fargate_base       = 0
+  fargate_weight     = 1
 }
 
 # ── API service ───────────────────────────────────────────────────────────────
