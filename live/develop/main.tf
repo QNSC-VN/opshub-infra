@@ -105,7 +105,7 @@ module "rds" {
   multi_az                 = false
   deletion_protection      = false
   backup_retention_days    = 3
-  tags                     = { Environment = local.env }
+  tags                     = { Environment = local.env, AutoStop = "true" }
 }
 
 # ── Messaging (SQS outbox + SNS) ──────────────────────────────────────────────
@@ -296,7 +296,7 @@ module "api" {
   sqs_queue_arns = values(module.messaging.queue_arns)
   sns_topic_arns = values(module.messaging.topic_arns)
   s3_bucket_arns = [aws_s3_bucket.uploads.arn]
-  tags           = { Environment = local.env, Service = "api" }
+  tags           = { Environment = local.env, Service = "api", AutoStop = "true" }
 }
 
 # ── Worker service ────────────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ module "worker" {
   sqs_queue_arns = values(module.messaging.queue_arns)
   sns_topic_arns = values(module.messaging.topic_arns)
   s3_bucket_arns = [aws_s3_bucket.uploads.arn]
-  tags           = { Environment = local.env, Service = "worker" }
+  tags           = { Environment = local.env, Service = "worker", AutoStop = "true" }
 }
 
 # ── WAF ───────────────────────────────────────────────────────────────────────
@@ -362,4 +362,12 @@ module "cdn" {
   aliases      = []   # set to ["app-dev.opshub.qnsc.io"] once DNS is configured
   price_class  = "PriceClass_200"
   tags         = { Environment = local.env, Service = "web" }
+}
+
+# ── Dev cost saver: stop RDS + scale ECS to 0 off-hours ───────────────────────
+# Acts on resources tagged AutoStop=true (rds, api, worker above).
+module "dev_scheduler" {
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/dev-scheduler?ref=dev-scheduler-v1.0.0"
+  name   = local.name
+  tags   = { Environment = local.env }
 }
