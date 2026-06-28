@@ -110,9 +110,16 @@ module "rds" {
 
 # ── Messaging (SQS outbox + SNS) ──────────────────────────────────────────────
 module "messaging" {
-  source = "../../modules/messaging"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/messaging?ref=messaging-v1.0.0"
   prefix = local.name
-  tags   = { Environment = local.env }
+
+  queues = {
+    outbox = { visibility_timeout = 60 }
+  }
+  topics                = ["events"]
+  create_queue_policies = false # opshub had no SNS-publish queue policy
+
+  tags = { Environment = local.env }
 }
 
 # ── S3 upload bucket (leave docs, profile photos, attachments) ────────────────
@@ -282,7 +289,7 @@ module "api" {
     { name = "NODE_ENV",          value = "production" },
     { name = "PORT",              value = "3000" },
     { name = "AWS_REGION",        value = local.region },
-    { name = "SQS_OUTBOX_URL",    value = module.messaging.outbox_queue_url },
+    { name = "SQS_OUTBOX_URL",    value = module.messaging.queue_urls["outbox"] },
     { name = "S3_UPLOAD_BUCKET",  value = aws_s3_bucket.uploads.id },
   ]
 
@@ -325,7 +332,7 @@ module "worker" {
   environment_vars = [
     { name = "NODE_ENV",         value = "production" },
     { name = "AWS_REGION",       value = local.region },
-    { name = "SQS_OUTBOX_URL",   value = module.messaging.outbox_queue_url },
+    { name = "SQS_OUTBOX_URL",   value = module.messaging.queue_urls["outbox"] },
     { name = "S3_UPLOAD_BUCKET", value = aws_s3_bucket.uploads.id },
   ]
 
