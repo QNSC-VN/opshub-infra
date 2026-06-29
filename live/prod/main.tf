@@ -133,24 +133,19 @@ resource "aws_s3_bucket_cors_configuration" "uploads" {
   }
 }
 
-# ── ElastiCache Serverless (Valkey) ──────────────────────────────────────────
-resource "aws_elasticache_serverless_cache" "valkey" {
-  engine = "valkey"
-  name   = "${local.name}-valkey"
+# ── Cache (Valkey) ────────────────────────────────────────────────────────────
+module "cache" {
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/cache?ref=cache-v1.0.0"
 
-  cache_usage_limits {
-    data_storage {
-      maximum = 5
-      unit    = "GB"
-    }
-    ecpu_per_second {
-      maximum = 5000
-    }
-  }
+  name              = "${local.name}-valkey"
+  subnet_ids        = module.network.data_subnet_ids
+  security_group_id = module.network.sg_cache_id
 
-  subnet_ids         = module.network.data_subnet_ids
-  security_group_ids = [module.network.sg_cache_id]
-  tags               = { Name = "${local.name}-valkey", Environment = local.env }
+  mode                = "serverless"
+  max_data_storage_gb = 5
+  max_ecpu_per_second = 5000
+
+  tags = { Environment = local.env }
 }
 
 # ── RDS PostgreSQL 18 (Multi-AZ, protected) ───────────────────────────────────

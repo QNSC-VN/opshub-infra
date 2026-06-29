@@ -176,24 +176,17 @@ resource "aws_s3_bucket_cors_configuration" "uploads" {
   }
 }
 
-# ── ElastiCache Serverless (Valkey) — rate limiting + authz cache ─────────────
-resource "aws_elasticache_serverless_cache" "valkey" {
-  engine = "valkey"
-  name   = "${local.name}-valkey"
+# ── Cache (Valkey) — rate limiting + authz cache ──────────────────────────────
+module "cache" {
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/cache?ref=cache-v1.0.0"
 
-  cache_usage_limits {
-    data_storage {
-      maximum = 1
-      unit    = "GB"
-    }
-    ecpu_per_second {
-      maximum = 1000
-    }
-  }
+  name              = "${local.name}-valkey"
+  subnet_ids        = module.network.data_subnet_ids
+  security_group_id = module.network.sg_cache_id
 
-  subnet_ids         = module.network.data_subnet_ids
-  security_group_ids = [module.network.sg_cache_id]
-  tags               = { Name = "${local.name}-valkey", Environment = local.env }
+  mode = "node" # dev: single small node (~$11/mo) vs serverless ~$90 floor
+
+  tags = { Environment = local.env }
 }
 
 # ── ALB ───────────────────────────────────────────────────────────────────────
