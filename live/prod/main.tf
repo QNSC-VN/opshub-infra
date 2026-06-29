@@ -155,9 +155,10 @@ resource "aws_elasticache_serverless_cache" "valkey" {
 
 # ── RDS PostgreSQL 18 (Multi-AZ, protected) ───────────────────────────────────
 module "rds" {
-  source = "../../modules/rds"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/rds?ref=rds-v1.0.0"
 
   identifier               = local.name
+  engine_version           = "18"
   subnet_ids               = module.network.data_subnet_ids
   security_group_id        = module.network.sg_rds_id
   kms_key_arn              = local.kms_key_arn
