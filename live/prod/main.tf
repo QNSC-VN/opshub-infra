@@ -262,7 +262,7 @@ module "ecs_cluster" {
 
 # ── API service ───────────────────────────────────────────────────────────────
 module "api" {
-  source = "../../modules/ecs-service"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/ecs-service?ref=ecs-service-v1.0.0"
 
   service_name = "api"
   cluster_name = module.ecs_cluster.cluster_name
@@ -311,7 +311,7 @@ module "api" {
 
 # ── Worker service ────────────────────────────────────────────────────────────
 module "worker" {
-  source = "../../modules/ecs-service"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/ecs-service?ref=ecs-service-v1.0.0"
 
   service_name = "worker"
   cluster_name = module.ecs_cluster.cluster_name
