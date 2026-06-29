@@ -349,7 +349,7 @@ module "worker" {
 }
 
 module "waf" {
-  source     = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/waf?ref=waf-v1.0.0"
+  source     = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/waf?ref=waf-v1.0.1"
   name       = local.name
   alb_arn    = aws_lb.this.arn
   rate_limit_per_5min = 5000
