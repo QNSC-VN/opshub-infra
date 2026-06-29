@@ -346,10 +346,10 @@ module "worker" {
 
 # ── WAF ───────────────────────────────────────────────────────────────────────
 module "waf" {
-  source     = "../../modules/waf"
+  source     = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/waf?ref=waf-v1.0.0"
   name       = local.name
   alb_arn    = aws_lb.this.arn
-  rate_limit = 2000
+  rate_limit_per_5min = 2000
   tags       = { Environment = local.env }
 }
 # ── CDN (S3 + CloudFront) — opshub-web SPA ─────────────────────────────────────

@@ -354,10 +354,10 @@ module "worker" {
 }
 
 module "waf" {
-  source     = "../../modules/waf"
+  source     = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/waf?ref=waf-v1.0.0"
   name       = local.name
   alb_arn    = aws_lb.this.arn
-  rate_limit = 5000
+  rate_limit_per_5min = 5000
   tags       = { Environment = local.env }
 }
 
