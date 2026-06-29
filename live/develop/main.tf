@@ -44,9 +44,10 @@ locals {
 
   kms_key_arn = data.terraform_remote_state.shared.outputs.kms_key_arn
 
-  ecr_base       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${local.region}.amazonaws.com"
-  ecr_api_url    = "${local.ecr_base}/opshub-api:${var.image_tag}"
-  ecr_worker_url = "${local.ecr_base}/opshub-worker:${var.image_tag}"
+  ecr_base          = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${local.region}.amazonaws.com"
+  ecr_api_url       = "${local.ecr_base}/opshub-api:${var.image_tag}"
+  ecr_worker_url    = "${local.ecr_base}/opshub-worker:${var.image_tag}"
+  ecr_migrator_url  = "${local.ecr_base}/opshub-migrator:latest"
 }
 
 # ── Networking ────────────────────────────────────────────────────────────────
@@ -94,7 +95,7 @@ module "secrets" {
 
 # ── RDS PostgreSQL 18 ─────────────────────────────────────────────────────────
 module "rds" {
-  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/rds?ref=rds-v1.0.0"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/rds?ref=rds-v1.0.1"
 
   identifier               = local.name
   engine_version           = "18"
@@ -335,6 +336,50 @@ module "worker" {
   sns_topic_arns = values(module.messaging.topic_arns)
   s3_bucket_arns = [aws_s3_bucket.uploads.arn]
   tags           = { Environment = local.env, Service = "worker", AutoStop = "true" }
+}
+
+# ── ECS Task Definition — Migrator (one-shot, run manually or via CI) ─────────
+resource "aws_cloudwatch_log_group" "migrator" {
+  name              = "/ecs/${local.name}/migrator"
+  retention_in_days = 30
+  tags              = { Environment = local.env, Service = "migrator" }
+}
+
+resource "aws_ecs_task_definition" "migrator" {
+  family                   = "${local.name}-migrator"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = 512
+  memory                   = 1024
+  execution_role_arn       = module.api.execution_role_arn
+  task_role_arn            = module.api.task_role_arn
+
+  container_definitions = jsonencode([{
+    name      = "migrator"
+    image     = local.ecr_migrator_url
+    essential = true
+
+    environment = [
+      { name = "NODE_ENV",       value = "production" },
+      { name = "AWS_REGION",     value = local.region },
+      { name = "SEED_ON_DEPLOY", value = "true" },
+    ]
+
+    secrets = [
+      { name = "DATABASE_URL", valueFrom = module.secrets.secret_arns["db-url"] },
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.migrator.name
+        "awslogs-region"        = local.region
+        "awslogs-stream-prefix" = "migrator"
+      }
+    }
+  }])
+
+  tags = { Environment = local.env, Service = "migrator" }
 }
 
 # ── WAF ───────────────────────────────────────────────────────────────────────

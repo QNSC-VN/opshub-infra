@@ -150,7 +150,7 @@ module "cache" {
 
 # ── RDS PostgreSQL 18 (Multi-AZ, protected) ───────────────────────────────────
 module "rds" {
-  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/rds?ref=rds-v1.0.0"
+  source = "git::https://github.com/QNSC-VN/qnsc-tf-modules.git//modules/rds?ref=rds-v1.0.1"
 
   identifier               = local.name
   engine_version           = "18"
